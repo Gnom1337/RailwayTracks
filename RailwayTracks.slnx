@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Application/Application.csproj" />
+  <Project Path="Domain/Domain.csproj" />
+  <Project Path="Infrastructure/Infrastructure.csproj" />
+  <Project Path="RailwayTracks.AppHost/RailwayTracks.AppHost.csproj" />
+  <Project Path="RailwayTracks.ServiceDefaults/RailwayTracks.ServiceDefaults.csproj" />
+  <Project Path="RailwayTracks/RailwayTracks.csproj" />
+</Solution>
