@@ -28,8 +28,4 @@
     <ProjectReference Include="..\RailwayTracks.ServiceDefaults\RailwayTracks.ServiceDefaults.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
 </Project>

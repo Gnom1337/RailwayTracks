@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Domain.Entities
 {
-    public class RepairTeam : BaseEntity
+    public class RepairTeam : BaseAuditEntity
     {
         public string Name { get; set; } = null!;
         public string Contact { get; set; } = null!;

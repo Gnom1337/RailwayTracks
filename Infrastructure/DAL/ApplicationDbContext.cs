@@ -1,6 +1,7 @@
 ﻿using Domain.Entities;
 using Infrastructure.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -10,9 +11,10 @@ using System.Text;
 
 namespace Infrastructure.DAL
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
+
         public DbSet<Defect> Defects { get; set; }
         public DbSet<Location> Locations { get; set; }
         public DbSet<RepairTeam> RepairTeams { get; set; }
@@ -20,53 +22,80 @@ namespace Infrastructure.DAL
         public DbSet<DefectType> DefectTypes { get; set; }
         public DbSet<DataSource> DataSources { get; set; }
         public DbSet<DefectStatusHistory> DefectStatusHistories { get; set; }
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-        {
 
-        }
+        public DbSet<TrackSegment> TrackSegments { get; set; }
 
-        protected ApplicationDbContext(IHttpContextAccessor httpContextAccessor)
+        public DbSet<TrackPoint> TrackPoints { get; set; }
+
+        public DbSet<TrackSensor> TrackSensors { get; set; }
+        public ApplicationDbContext(
+            DbContextOptions<ApplicationDbContext> options,
+            IHttpContextAccessor httpContextAccessor)
+            : base(options)
         {
             _httpContextAccessor = httpContextAccessor;
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
-
             base.OnModelCreating(builder);
-            builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+            builder.Entity<Location>(entity =>
+            {
+                entity.Property(x => x.Latitude).HasPrecision(9, 6);
+                entity.Property(x => x.Longitude).HasPrecision(9, 6);
+            });
+
+            builder.ApplyConfigurationsFromAssembly(
+                typeof(ApplicationDbContext).Assembly);
         }
+
         public override int SaveChanges()
         {
             UpdateAuditFields();
+
             return base.SaveChanges();
         }
 
-        public override async Task<int> SaveChangesAsync(
+        public override Task<int> SaveChangesAsync(
             CancellationToken cancellationToken = default)
         {
             UpdateAuditFields();
-            return await base.SaveChangesAsync(cancellationToken);
+
+            return base.SaveChangesAsync(cancellationToken);
         }
 
         private void UpdateAuditFields()
         {
+            var userName =
+                _httpContextAccessor.HttpContext?.User?.Identity?.Name
+                ?? "System";
+
+            var now = DateTime.UtcNow;
+
             foreach (var entry in ChangeTracker.Entries<BaseAuditEntity>())
             {
-                if (entry.State == EntityState.Added)
+                switch (entry.State)
                 {
-                    entry.Entity.CreatedAt = DateTime.UtcNow;
-                    entry.Entity.CreatedBy = _httpContextAccessor.HttpContext.User.Identity!.Name!;
-                    entry.Entity.ModifiedAt = DateTime.UtcNow;
-                    entry.Entity.ModifiedBy = _httpContextAccessor.HttpContext.User.Identity!.Name!;
-                }
+                    case EntityState.Added:
+                        entry.Entity.CreatedAt = now;
+                        entry.Entity.CreatedBy = userName;
 
-                if (entry.State == EntityState.Modified)
-                {
-                    entry.Entity.ModifiedAt = DateTime.UtcNow;
-                    entry.Entity.ModifiedBy = _httpContextAccessor.HttpContext.User.Identity!.Name!;
+                        entry.Entity.ModifiedAt = now;
+                        entry.Entity.ModifiedBy = userName;
+                        break;
+
+                    case EntityState.Modified:
+                        entry.Entity.ModifiedAt = now;
+                        entry.Entity.ModifiedBy = userName;
+
+                        // Не позволяем изменять данные создания
+                        entry.Property(x => x.CreatedAt).IsModified = false;
+                        entry.Property(x => x.CreatedBy).IsModified = false;
+                        break;
                 }
             }
         }
     }
 }
+

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Domain.Entities
 {
-    public class DataSource : BaseEntity
+    public class DataSource : BaseAuditEntity
     {
         public string Name { get; set; } = null!;
     }

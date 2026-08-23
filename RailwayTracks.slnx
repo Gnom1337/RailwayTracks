@@ -4,5 +4,9 @@
   <Project Path="Infrastructure/Infrastructure.csproj" />
   <Project Path="RailwayTracks.AppHost/RailwayTracks.AppHost.csproj" />
   <Project Path="RailwayTracks.ServiceDefaults/RailwayTracks.ServiceDefaults.csproj" />
+  <Project Path="railwaytracks.web/railwaytracks.web.esproj">
+    <Build />
+    <Deploy />
+  </Project>
   <Project Path="RailwayTracks/RailwayTracks.csproj" />
 </Solution>

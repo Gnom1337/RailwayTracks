@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Domain.Entities
 {
-    public class DefectType : BaseEntity
+    public class DefectType : BaseAuditEntity
     {
         public string Name { get; set; } = null!;
         public string? Description { get; set; }

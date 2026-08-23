@@ -1,5 +1,9 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-builder.AddProject<Projects.RailwayTracks>("railwaytracks");
+var api = builder
+    .AddProject<Projects.RailwayTracks>("api");
 
+var frontend = builder.AddViteApp(
+    "frontend",
+    "../railwaytracks.web");
 builder.Build().Run();

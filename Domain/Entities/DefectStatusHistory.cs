@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Domain.Entities
 {
-    public class DefectStatusHistory : BaseEntity
+    public class DefectStatusHistory : BaseAuditEntity
     {
         public Guid DefectId { get; set; }
         public Defect Defect { get; set; } = null!;
