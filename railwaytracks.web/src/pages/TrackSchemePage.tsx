@@ -30,7 +30,8 @@ import UndoRoundedIcon from '@mui/icons-material/UndoRounded'
 import ClearRoundedIcon from '@mui/icons-material/ClearRounded'
 import DoneRoundedIcon from '@mui/icons-material/DoneRounded'
 import MouseIcon from '@mui/icons-material/Mouse'
-
+import AssessmentRoundedIcon from '@mui/icons-material/AssessmentRounded'
+import { TrackSegmentReportDialog } from '../Components/TrackSegmentReportDialog'
 import {
     defectsApi,
     locationsApi,
@@ -59,7 +60,7 @@ export function TrackSchemePage() {
      * DATA
      * =========================================================
      */
-
+    const [reportDialogOpen, setReportDialogOpen] = useState(false)
     const [segments, setSegments] =
         useState<TrackSegment[]>([])
 
@@ -672,35 +673,58 @@ export function TrackSchemePage() {
      * RENDER
      * =========================================================
      */
+    const formatMoscowDate = (value: unknown): string => {
+        if (value == null || value === '') {
+            return 'Не указано';
+        }
 
+        const date = new Date(String(value));
+
+        if (Number.isNaN(date.getTime())) {
+            return String(value);
+        }
+
+        return new Intl.DateTimeFormat('ru-RU', {
+            timeZone: 'Europe/Moscow',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(date);
+    };
+
+    const defectFieldLabels: Record<string, string> = {
+        id: 'Идентификатор дефекта',
+        defectTypeId: 'Тип дефекта',
+        locationId: 'Местоположение',
+        detectedAt: 'Дата обнаружения',
+        detectedById: 'Кем обнаружен',
+        saverity: 'Критичность',
+        severity: 'Критичность',
+        description: 'Описание',
+        plannedRepairDate: 'Плановая дата ремонта',
+        repairTeamId: 'Ремонтная бригада',
+        recommendationType: 'Тип рекомендации',
+        sourceType: 'Источник обнаружения',
+        status: 'Статус',
+    };
     return (
         <Stack spacing={2.5}>
 
             {/* HEADER */}
 
             <Stack
-                direction={{
-                    xs: 'column',
-                    md: 'row',
-                }}
+                direction={{ xs: 'column', md: 'row' }}
                 justifyContent="space-between"
-                alignItems={{
-                    xs: 'flex-start',
-                    md: 'center',
-                }}
+                alignItems={{ xs: 'flex-start', md: 'center' }}
                 gap={2}
             >
                 <Box>
-                    <Stack
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                    >
+                    <Stack direction="row" spacing={1} alignItems="center">
                         <DirectionsRailwayRoundedIcon
                             color="primary"
-                            sx={{
-                                fontSize: 36,
-                            }}
+                            sx={{ fontSize: 36 }}
                         />
 
                         <Typography variant="h4">
@@ -708,15 +732,25 @@ export function TrackSchemePage() {
                         </Typography>
                     </Stack>
 
-                    <Typography
-                        color="text.secondary"
-                        sx={{ mt: 0.7 }}
-                    >
-                        Схема железнодорожных
-                        путей, датчиков,
-                        локаций и дефектов
+                    <Typography color="text.secondary" sx={{ mt: 0.7 }}>
+                        Схема железнодорожных путей, датчиков, локаций и дефектов
                     </Typography>
                 </Box>
+
+                <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<AssessmentRoundedIcon />}
+                    onClick={() => setReportDialogOpen(true)}
+                    sx={{
+                        borderRadius: 2,
+                        px: 2.5,
+                        py: 1.2,
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    Сформировать отчет
+                </Button>
             </Stack>
 
 
@@ -1450,81 +1484,164 @@ export function TrackSchemePage() {
                                 <Divider />
 
 
-                                {/* DEFECTS */}
+                                    {/* DEFECTS */}
 
-                                <Box>
-                                    <Typography
-                                        variant="subtitle1"
-                                        fontWeight={700}
-                                    >
-                                        Дефекты
-                                    </Typography>
+                                    <Box>
+                                        <Typography
+                                            variant="subtitle1"
+                                            fontWeight={700}
+                                        >
+                                            Дефекты
+                                            <Chip
+                                                size="small"
+                                                label={selectedDefects.length}
+                                                sx={{ ml: 1, height: 22 }}
+                                            />
+                                        </Typography>
 
-                                    <Stack
-                                        spacing={1}
-                                        sx={{
-                                            mt: 1,
-                                        }}
-                                    >
-                                        {selectedDefects.map(
-                                            defect => (
-                                                <Card
-                                                    key={
-                                                        defect.id
-                                                    }
-                                                    variant="outlined"
-                                                >
-                                                    <CardContent>
-                                                        <Stack
-                                                            direction="row"
-                                                            justifyContent="space-between"
-                                                            alignItems="center"
-                                                            gap={2}
-                                                        >
-                                                            <Box>
-                                                                <Typography fontWeight={700}>
-                                                                    DEF-
-                                                                    {defect.id.slice(
-                                                                        0,
-                                                                        8,
-                                                                    )}
-                                                                </Typography>
+                                        <Stack spacing={1} sx={{ mt: 1 }}>
+                                            {selectedDefects.map(defect => {
+                                                const labels: Record<string, string> = {
+                                                    id: 'Идентификатор',
+                                                    description: 'Описание',
+                                                    status: 'Статус',
+                                                    locationId: 'Местоположение',
+                                                    createdAt: 'Дата создания',
+                                                    updatedAt: 'Дата обновления',
+                                                    type: 'Тип дефекта',
+                                                    severity: 'Критичность',
+                                                };
 
-                                                                <Typography
-                                                                    variant="body2"
-                                                                    color="text.secondary"
+                                                const statusText = enumLabel(
+                                                    statusLabels,
+                                                    defect.status,
+                                                );
+
+                                                const statusColors: Record<
+                                                    string,
+                                                    'error' | 'warning' | 'success' | 'default'
+                                                > = {
+                                                    open: 'error',
+                                                    new: 'error',
+                                                    in_progress: 'warning',
+                                                    resolved: 'success',
+                                                    closed: 'success',
+                                                };
+
+                                                return (
+                                                    <Card
+                                                        key={defect.id}
+                                                        variant="outlined"
+                                                        sx={{
+                                                            borderRadius: 2,
+                                                            '&:hover': {
+                                                                borderColor: 'primary.main',
+                                                            },
+                                                        }}
+                                                    >
+                                                        <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                                                            <Stack spacing={1}>
+                                                                <Stack
+                                                                    direction="row"
+                                                                    alignItems="center"
+                                                                    justifyContent="space-between"
+                                                                    gap={1}
                                                                 >
-                                                                    {
-                                                                        defect.description ||
-                                                                        'Описание отсутствует'
-                                                                    }
-                                                                </Typography>
-                                                            </Box>
+                                                                    <Typography
+                                                                        variant="subtitle2"
+                                                                        fontWeight={700}
+                                                                    >
+                                                                        Дефект
+                                                                    </Typography>
 
-                                                            <Chip
-                                                                size="small"
-                                                                label={enumLabel(
-                                                                    statusLabels,
-                                                                    defect.status,
-                                                                )}
-                                                            />
-                                                        </Stack>
-                                                    </CardContent>
-                                                </Card>
-                                            ),
-                                        )}
+                                                                    <Chip
+                                                                        size="small"
+                                                                        label={statusText}
+                                                                        color={
+                                                                            statusColors[
+                                                                            String(defect.status).toLowerCase()
+                                                                            ] ?? 'default'
+                                                                        }
+                                                                    />
+                                                                </Stack>
 
-                                        {!selectedDefects.length && (
-                                            <Typography
-                                                variant="body2"
-                                                color="text.secondary"
-                                            >
-                                                Дефектов на
-                                                участке нет.
-                                            </Typography>
-                                        )}
-                                    </Stack>
-                                </Box>
+                                                                <Divider />
+
+                                                                {Object.entries(defect)
+                                                                    .filter(([key]) => key !== 'status')
+                                                                    .map(([key, value]) => {
+                                                                        const label =
+                                                                            defectFieldLabels[key] ?? key;
+
+                                                                        let displayValue: string;
+
+                                                                        if (value == null || value === '') {
+                                                                            displayValue = 'Не указано';
+                                                                        } else if (
+                                                                            key === 'detectedAt' ||
+                                                                            key === 'plannedRepairDate'
+                                                                        ) {
+                                                                            displayValue = formatMoscowDate(value);
+                                                                        } else if (
+                                                                            key === 'id' ||
+                                                                            key.endsWith('Id')
+                                                                        ) {
+                                                                            displayValue = String(value);
+                                                                        } else {
+                                                                            displayValue = String(value);
+                                                                        }
+
+                                                                        return (
+                                                                            <Stack
+                                                                                key={key}
+                                                                                direction="row"
+                                                                                spacing={1}
+                                                                                alignItems="flex-start"
+                                                                            >
+                                                                                <Typography
+                                                                                    variant="caption"
+                                                                                    color="text.secondary"
+                                                                                    sx={{
+                                                                                        minWidth: 150,
+                                                                                        flexShrink: 0,
+                                                                                    }}
+                                                                                >
+                                                                                    {label}
+                                                                                </Typography>
+
+                                                                                <Typography
+                                                                                    variant="body2"
+                                                                                    sx={{
+                                                                                        overflowWrap: 'anywhere',
+                                                                                        minWidth: 0,
+                                                                                        fontFamily:
+                                                                                            key === 'id'
+                                                                                                ? 'monospace'
+                                                                                                : 'inherit',
+                                                                                    }}
+                                                                                >
+                                                                                    {displayValue}
+                                                                                </Typography>
+                                                                            </Stack>
+                                                                        );
+                                                                    })}
+                                                            </Stack>
+                                                        </CardContent>
+                                                    </Card>
+                                                );
+                                            })}
+
+                                            {!selectedDefects.length && (
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                    sx={{ py: 1 }}
+                                                >
+                                                    Дефектов на выбранном участке нет.
+                                                </Typography>
+                                            )}
+                                        </Stack>
+                                    </Box>
                             </Stack>
                         )}
                     </CardContent>
@@ -1671,7 +1788,14 @@ export function TrackSchemePage() {
                 </DialogActions>
             </Dialog>
 
-
+            <TrackSegmentReportDialog
+                open={reportDialogOpen}
+                onClose={() => setReportDialogOpen(false)}
+                segments={segments}
+                defects={defects}
+                sensors={sensors}
+                locations={locations}
+            />
             {/* =====================================================
           SENSOR DIALOG
          ===================================================== */}

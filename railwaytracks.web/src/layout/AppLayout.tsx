@@ -25,7 +25,6 @@ const nav = [
 ]
 
 const adminNav = [
-  { to: '/locations', label: 'Участки', icon: <PlaceRoundedIcon /> },
   { to: '/inspectors', label: 'Инспекторы', icon: <SensorsRoundedIcon /> },
   { to: '/repair-teams', label: 'Ремонтные бригады', icon: <EngineeringRoundedIcon /> },
   { to: '/defect-types', label: 'Типы дефектов', icon: <WarningAmberRoundedIcon /> },

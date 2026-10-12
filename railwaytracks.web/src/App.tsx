@@ -25,7 +25,6 @@ export function App() {
 
           <Route element={<ProtectedRoute roles={['Admin']} />}>
             <Route path="/defect-types" element={<SimpleCrudPage title="Типы дефектов" resource="defect-types" />} />
-            <Route path="/locations" element={<SimpleCrudPage title="Участки" resource="locations" />} />
             <Route path="/inspectors" element={<SimpleCrudPage title="Инспекторы" resource="inspectors" />} />
             <Route path="/repair-teams" element={<SimpleCrudPage title="Ремонтные бригады" resource="repair-teams" />} />
             <Route path="/data-sources" element={<SimpleCrudPage title="Источники данных" resource="data-sources" />} />

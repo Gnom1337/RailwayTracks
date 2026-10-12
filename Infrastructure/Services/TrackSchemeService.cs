@@ -96,9 +96,19 @@ namespace Infrastructure.Services
                     Y = x.Y
                 })
                 .ToList();
-
+            
             _context.TrackSegments.Add(segment);
-
+            _context.Locations.Add(new Location
+            {
+                Id = Guid.NewGuid(),
+                TrackSegmentId = segment.Id,
+                RailwaySection = segment.Name,
+                SubDivision = string.Empty,
+                Kilometer = segment.StartKm,
+                Picket = 0,
+                Latitude = 0,
+                Longitude = 0
+            });
             await _context.SaveChangesAsync(
                 cancellationToken);
 
