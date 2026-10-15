@@ -121,6 +121,7 @@ removeSegment(id: string) {
     createSensor(data: {
         name: string
         serial: string
+        positionKm: number
         x: number
         y: number
     }) {

@@ -36,6 +36,7 @@ import {
     defectsApi,
     locationsApi,
     trackSchemeApi,
+    defectTypesApi
 } from '../api/services'
 
 import type {
@@ -60,6 +61,9 @@ export function TrackSchemePage() {
      * DATA
      * =========================================================
      */
+    const [defectTypes, setDefectTypes] = useState<
+        { id: string; name: string }[]
+    >([])
     const [reportDialogOpen, setReportDialogOpen] = useState(false)
     const [segments, setSegments] =
         useState<TrackSegment[]>([])
@@ -132,6 +136,7 @@ export function TrackSchemePage() {
     const [sensorForm, setSensorForm] = useState({
         name: '',
         serial: '',
+        positionKm: '',
     })
 
 
@@ -151,17 +156,20 @@ export function TrackSchemePage() {
                 sensorsData,
                 defectsData,
                 locationsData,
+                defectTypesData,
             ] = await Promise.all([
                 trackSchemeApi.getSegments(),
                 trackSchemeApi.getSensors(),
                 defectsApi.list(),
                 locationsApi.list(),
-            ])
+                defectTypesApi.list(),
+            ]);
 
-            setSegments(segmentsData)
-            setSensors(sensorsData)
-            setDefects(defectsData)
-            setLocations(locationsData)
+            setSegments(segmentsData);
+            setSensors(sensorsData);
+            setDefects(defectsData);
+            setLocations(locationsData);
+            setDefectTypes(defectTypesData);
 
             setSelected(current => {
                 if (!current) {
@@ -564,6 +572,7 @@ export function TrackSchemePage() {
         setSensorForm({
             name: '',
             serial: '',
+            positionKm: '',
         })
 
         setError('')
@@ -590,25 +599,26 @@ export function TrackSchemePage() {
             return
         }
 
-        const name =
-            sensorForm.name.trim()
+        const name = sensorForm.name.trim()
+        const serial = sensorForm.serial.trim()
+        const positionKm = Number(sensorForm.positionKm)
 
-        const serial =
-            sensorForm.serial.trim()
-
-        if (!name) {
-            setError(
-                'Введите название датчика.',
-            )
-
+        if (!name || !serial) {
+            setError('Введите название и серийный номер датчика.')
             return
         }
 
-        if (!serial) {
-            setError(
-                'Введите серийный номер датчика.',
-            )
+        if (
+            sensorForm.positionKm.trim() === '' ||
+            !Number.isFinite(positionKm) ||
+            positionKm < 0
+        ) {
+            setError('Введите корректный километр установки.')
+            return
+        }
 
+        if (!sensorPoint) {
+            setError('Сначала выберите точку установки датчика на пути.')
             return
         }
 
@@ -628,6 +638,7 @@ export function TrackSchemePage() {
             await trackSchemeApi.createSensor({
                 name,
                 serial,
+                positionKm,
                 x: sensorPoint.x,
                 y: sensorPoint.y,
             })
@@ -639,6 +650,7 @@ export function TrackSchemePage() {
             setSensorForm({
                 name: '',
                 serial: '',
+                positionKm: '',
             })
 
             setDiagramMode('view')
@@ -662,6 +674,7 @@ export function TrackSchemePage() {
         setSensorForm({
             name: '',
             serial: '',
+            positionKm: '',
         })
 
         setDiagramMode('view')
@@ -697,7 +710,7 @@ export function TrackSchemePage() {
     const defectFieldLabels: Record<string, string> = {
         id: 'Идентификатор дефекта',
         defectTypeId: 'Тип дефекта',
-        locationId: 'Местоположение',
+        locationId: '',
         detectedAt: 'Дата обнаружения',
         detectedById: 'Кем обнаружен',
         saverity: 'Критичность',
@@ -708,6 +721,12 @@ export function TrackSchemePage() {
         recommendationType: 'Тип рекомендации',
         sourceType: 'Источник обнаружения',
         status: 'Статус',
+    };
+    const getDefectTypeName = (defectTypeId: string): string => {
+        return (
+            defectTypes.find(type => type.id === defectTypeId)?.name ??
+            'Неизвестный тип дефекта'
+        );
     };
     return (
         <Stack spacing={2.5}>
@@ -1582,11 +1601,14 @@ export function TrackSchemePage() {
                                                                             key === 'plannedRepairDate'
                                                                         ) {
                                                                             displayValue = formatMoscowDate(value);
-                                                                        } else if (
-                                                                            key === 'id' ||
-                                                                            key.endsWith('Id')
-                                                                        ) {
-                                                                            displayValue = String(value);
+                                                                        } else if (key === 'defectTypeId') {
+                                                                            displayValue =
+                                                                                defectTypes.find(
+                                                                                    (type: { id: string; name: string }) =>
+                                                                                        type.id === String(value)
+                                                                                )?.name ?? 'Неизвестный тип дефекта';
+                                                                        } else if (key === 'locationId') {
+                                                                            displayValue = '';
                                                                         } else {
                                                                             displayValue = String(value);
                                                                         }
@@ -1862,7 +1884,20 @@ export function TrackSchemePage() {
                                 })
                             }
                         />
-
+                        <TextField
+                            fullWidth
+                            label="Километр установки"
+                            placeholder="Например, 125.4"
+                            type="number"
+                            value={sensorForm.positionKm}
+                            inputProps={{ min: 0, step: 1 }}
+                            onChange={(event) =>
+                                setSensorForm({
+                                    ...sensorForm,
+                                    positionKm: event.target.value,
+                                })
+                            }
+                        />
                         {sensorPoint && (
                             <Stack
                                 direction="row"
