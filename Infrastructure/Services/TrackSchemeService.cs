@@ -402,9 +402,6 @@ namespace Infrastructure.Services
                 throw new KeyNotFoundException(
                     "Не найден участок пути.");
 
-            if (nearestDistance > 30)
-                throw new InvalidOperationException(
-                    "Датчик должен находиться рядом с путем.");
 
             return nearestSegment;
         }

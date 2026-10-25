@@ -200,6 +200,11 @@ export function TrackDiagram({
     const svgRef =
         useRef<SVGSVGElement | null>(null)
 
+    // Ссылка на группу, к которой применяются pan/zoom.
+    // Через её CTM переводим координаты мыши в координаты схемы.
+    const diagramGroupRef =
+        useRef<SVGGElement | null>(null)
+
     const [zoom, setZoom] = useState(1)
 
     const [pan, setPan] = useState({
@@ -234,26 +239,30 @@ export function TrackDiagram({
     function getSvgPoint(
         event: React.MouseEvent
     ): TrackPointInput | null {
-        if (!svgRef.current) {
+        const svg = svgRef.current
+        const group = diagramGroupRef.current
+
+        if (!svg || !group) {
             return null
         }
 
-        const rect =
-            svgRef.current.getBoundingClientRect()
+        const screenMatrix = group.getScreenCTM()
+        if (!screenMatrix) {
+            return null
+        }
 
-        const x =
-            (event.clientX - rect.left) /
-            rect.width *
-            WIDTH
+        // Учитывает viewBox, размер SVG, pan и zoom.
+        const svgPoint = svg.createSVGPoint()
+        svgPoint.x = event.clientX
+        svgPoint.y = event.clientY
 
-        const y =
-            (event.clientY - rect.top) /
-            rect.height *
-            HEIGHT
+        const localPoint = svgPoint.matrixTransform(
+            screenMatrix.inverse()
+        )
 
         return {
-            x,
-            y,
+            x: localPoint.x,
+            y: localPoint.y,
         }
     }
 
@@ -345,40 +354,38 @@ export function TrackDiagram({
             return
         }
 
-        /*
-         * Сначала пробуем snap
-         * к существующему пути.
-         */
-        const snappedToTrack =
-            getNearestPointOnTrack(
+        // Датчик можно установить только на существующий путь.
+        // Не создаём датчики на пустом месте и не привязываем их к сетке.
+        if (mode === 'sensor') {
+            const trackPoint = getNearestPointOnTrack(
                 raw,
                 segments
             )
 
-        /*
-         * Затем snap к существующей
-         * вершине.
-         */
-        const snappedToPoint =
-            getNearestExistingPoint(
-                raw,
-                segments
-            )
-
-        const point =
-            snappedToPoint ??
-            snappedToTrack ?? {
-                x: snapToGrid(raw.x),
-                y: snapToGrid(raw.y),
+            if (trackPoint) {
+                onSensorPosition(trackPoint)
             }
-
-        if (mode === 'draw') {
-            onPointAdd(point)
             return
         }
 
-        if (mode === 'sensor') {
-            onSensorPosition(point)
+        // В режиме рисования сначала привязываемся к вершине,
+        // затем к линии, иначе — к сетке.
+        const snappedToPoint = getNearestExistingPoint(
+            raw,
+            segments
+        )
+        const snappedToTrack = getNearestPointOnTrack(
+            raw,
+            segments
+        )
+
+        const point = snappedToPoint ?? snappedToTrack ?? {
+            x: snapToGrid(raw.x),
+            y: snapToGrid(raw.y),
+        }
+
+        if (mode === 'draw') {
+            onPointAdd(point)
         }
     }
 
@@ -667,6 +674,7 @@ export function TrackDiagram({
                 }}
             >
                 <g
+                    ref={diagramGroupRef}
                     transform={`
             translate(${pan.x} ${pan.y})
             translate(
@@ -693,17 +701,13 @@ export function TrackDiagram({
                     {/* TRACKS */}
 
                     {segments.map(segment => {
-                        const points =
-                            [...segment.points]
-                                .sort(
-                                    (a, b) =>
-                                        a.order - b.order
-                                )
-                                .map(
-                                    point =>
-                                        `${point.x},${point.y}`
-                                )
-                                .join(' ')
+                        const orderedPoints = [...segment.points].sort(
+                            (a, b) => a.order - b.order
+                        )
+
+                        const points = orderedPoints
+                            .map(point => `${point.x},${point.y}`)
+                            .join(' ')
 
                         const selected =
                             selectedId ===
@@ -767,13 +771,13 @@ export function TrackDiagram({
 
                                 {/* START */}
 
-                                {segment.points[0] && (
+                                {orderedPoints[0] && (
                                     <circle
                                         cx={
-                                            segment.points[0].x
+                                            orderedPoints[0].x
                                         }
                                         cy={
-                                            segment.points[0].y
+                                            orderedPoints[0].y
                                         }
                                         r={6}
                                         fill="#14b8a6"
@@ -782,45 +786,37 @@ export function TrackDiagram({
 
                                 {/* END */}
 
-                                {segment.points[
-                                    segment.points.length - 1
-                                ] && (
-                                        <circle
-                                            cx={
-                                                segment.points[
-                                                    segment.points.length - 1
-                                                ].x
-                                            }
-                                            cy={
-                                                segment.points[
-                                                    segment.points.length - 1
-                                                ].y
-                                            }
-                                            r={6}
-                                            fill="#14b8a6"
-                                        />
-                                    )}
+                                {orderedPoints[orderedPoints.length - 1] && (
+                                    <circle
+                                        cx={
+                                            orderedPoints[
+                                                orderedPoints.length - 1
+                                            ].x
+                                        }
+                                        cy={
+                                            orderedPoints[
+                                                orderedPoints.length - 1
+                                            ].y
+                                        }
+                                        r={6}
+                                        fill="#14b8a6"
+                                    />
+                                )}
 
                                 {/* NAME */}
 
-                                {segment.points[
-                                    Math.floor(
-                                        segment.points.length / 2
-                                    )
+                                {orderedPoints[
+                                    Math.floor(orderedPoints.length / 2)
                                 ] && (
                                         <text
                                             x={
-                                                segment.points[
-                                                    Math.floor(
-                                                        segment.points.length / 2
-                                                    )
+                                                orderedPoints[
+                                                    Math.floor(orderedPoints.length / 2)
                                                 ].x
                                             }
                                             y={
-                                                segment.points[
-                                                    Math.floor(
-                                                        segment.points.length / 2
-                                                    )
+                                                orderedPoints[
+                                                    Math.floor(orderedPoints.length / 2)
                                                 ].y - 20
                                             }
                                             fill="#dbeafe"
