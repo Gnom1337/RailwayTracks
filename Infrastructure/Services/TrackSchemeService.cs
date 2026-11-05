@@ -175,21 +175,14 @@ namespace Infrastructure.Services
                 throw new KeyNotFoundException(
                     "Участок пути не найден.");
 
-            var hasLocations = await _context.Locations
-                .AnyAsync(
-                    x => x.TrackSegmentId == id,
-                    cancellationToken);
 
-            if (hasLocations)
-            {
-                throw new InvalidOperationException(
-                    "Нельзя удалить участок, к которому привязаны локации.");
-            }
-
+            var locations = await _context.Locations.Where(x => x.TrackSegmentId == segment.Id).ToListAsync();
+            var sensors = await _context.TrackSensors.Where(x => x.TrackSegmentId == segment.Id).ToListAsync();
+            _context.Locations.RemoveRange(locations);
+            _context.TrackSensors.RemoveRange(sensors);
             _context.TrackSegments.Remove(segment);
 
-            await _context.SaveChangesAsync(
-                cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<IReadOnlyList<TrackSensorDto>>
